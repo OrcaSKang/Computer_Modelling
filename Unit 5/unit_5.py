@@ -16,7 +16,7 @@ class MarginalisedLikelihood:
             A list of parameters [Omega_m, Omega_Lambda, H0].
         bounds : list
             The bounds for the parameters.
-        N_value : float
+        N_value : float 
             A float of integration points to test.
         """
         self.likelihood = likelihood
