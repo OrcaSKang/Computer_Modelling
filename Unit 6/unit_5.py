@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from unit_4 import Likelihood
 import time
+from scipy.stats import gaussian_kde
 
 class MarginalisedLikelihood:
     def __init__(self, likelihood, bounds, N_value):
@@ -96,7 +97,7 @@ class MarginalisedLikelihood:
         ax.set_xlabel('Omega m')
         ax.set_ylabel('Omega lambda')
         ax.set_zlabel('H0')
-        ax.set_title('3D Marginalised Likelihood')
+        ax.set_title('3D Likelihood Grid')
 
         plt.show()
 
@@ -232,7 +233,7 @@ class Metropolis:
         self.step_size = step_size
         self.N_steps = N_steps
 
-    def __call__(self):
+    def __call__(self, burn_in = 300):
         """
         Run the Metropolis algorithm.
 
@@ -247,23 +248,33 @@ class Metropolis:
         theta_values = [theta]
         log_likelihood = self.likelihood(theta, 350)
         likelihood_values = [log_likelihood]
-        
+        counter = 0
         # Run the Metropolis algorithm
-        for i in range(self.N_steps):
+        for _ in range(self.N_steps):
             theta_new = theta + self.step_size * np.random.randn(len(theta))
-            log_likelihood_new = self.likelihood(theta_new, 350)
 
             if (self.bounds[0][0] <= theta_new[0] <= self.bounds[0][1] and 
                 self.bounds[1][0] <= theta_new[1] <= self.bounds[1][1] and 
                 self.bounds[2][0] <= theta_new[2] <= self.bounds[2][1]):
 
-                if  log_likelihood_new > log_likelihood or np.log(np.random.uniform(0, 1)) < log_likelihood_new - log_likelihood:
-                    theta = theta_new
-                    log_likelihood = log_likelihood_new
+                log_likelihood_new = self.likelihood(theta_new, 350)
+            else:
+                log_likelihood_new = -np.inf
+
+            if  log_likelihood_new > log_likelihood or np.log(np.random.uniform(0, 1)) < log_likelihood_new - log_likelihood:
+                theta = theta_new
+                log_likelihood = log_likelihood_new
+                counter += 1
 
             # Append the values to the arrays
             theta_values.append(theta)
             likelihood_values.append(log_likelihood)
+
+        print("The acceptance rate is", counter / self.N_steps)
+
+        # Discard the burn-in samples
+        theta_values = theta_values[burn_in:]
+        likelihood_values = likelihood_values[burn_in:]
 
         return np.array(theta_values), np.array(likelihood_values)
 
@@ -283,9 +294,6 @@ class Metropolis:
         Plot
             A 3D plot of the likelihood with respect to the parameters.
         """
-
-        # Assign the values from the Metropolis algorithm
-        theta_values, likelihood_values = self.__call__()
 
         # Compute the likelihood values
         likelihood_values = np.exp(likelihood_values - np.max(likelihood_values))
@@ -328,24 +336,37 @@ class Metropolis:
         # Normalise the likelihood values
         likelihood_values = np.exp(likelihood_values - np.max(likelihood_values))
 
+        x = theta_values[:, 0]
+        y = theta_values[:, 1]
+        z = theta_values[:, 2]
+
+        yz = np.vstack([y ,z])
+        xz = np.vstack([x ,z])
+        xy = np.vstack([x ,y])
+
+        density_x = gaussian_kde(yz)(yz)
+        density_y = gaussian_kde(xz)(xz)
+        density_z = gaussian_kde(xy)(xy)
+
         # Plot the 2D marginalised likelihoods over Omega_m, Omega_Lambda and H0
+
         plt.figure(figsize=(15, 5))
         plt.subplot(1, 3, 1)
-        plt.scatter(theta_values[:, 1], theta_values[:, 2], c = likelihood_values, cmap = 'viridis')
+        plt.scatter(y, z, c = density_x, cmap = 'viridis')
         plt.xlabel('Omega Lambda')
         plt.ylabel('H0')
         plt.title('MCMC 2D plot over Omega m')
         plt.colorbar(label = 'Probability Density')
 
         plt.subplot(1, 3, 2)
-        plt.scatter(theta_values[:, 0], theta_values[:, 2], c = likelihood_values, cmap = 'viridis')
+        plt.scatter(x, z, c = density_y, cmap = 'viridis')
         plt.xlabel('Omega m')
         plt.ylabel('H0')
         plt.title('MCMC 2D plot over Omega lambda')
         plt.colorbar(label = 'Probability Density')
 
         plt.subplot(1, 3, 3)
-        plt.scatter(theta_values[:, 0], theta_values[:, 1], c = likelihood_values, cmap = 'viridis')
+        plt.scatter(x, y, c = density_z, cmap = 'viridis')
         plt.xlabel('Omega m')
         plt.ylabel('Omega Lambda')
         plt.title('MCMC 2D plot over H0')
@@ -394,24 +415,19 @@ class Metropolis:
         plt.show()
 
     def test_convergence(self, theta_values):
-        plt.figure(figsize=(15, 5))
+        fig, axes = plt.subplots(3, 1, figsize=(15,5))
+        parameter = ["Omega m", "Omega lambda", "H0"]
 
-        plt.subplot(3, 1, 1)
-        plt.plot(np.arange(1, 10002), theta_values[:, 0])
+        for i, parameter in enumerate(parameter):
+            axes[i].plot(np.arange(1, 9702), theta_values[:, i])
+            axes[i].set_ylabel(f'{parameter}')
 
-
-        plt.subplot(3, 1, 2)
-        plt.plot(np.arange(1, 10002), theta_values[:, 1])
-
-
-        plt.subplot(3, 1, 3)
-        plt.plot(np.arange(1, 10002), theta_values[:, 2])
-
+        fig.suptitle("Convergence tests of the Metropolis chains")
+        plt.xlabel("The length of the Metropolis chains")
         plt.tight_layout()
         plt.show()
 
-
-data_file = '/Users/sangwonkang/Library/Mobile Documents/com~apple~CloudDocs/Documents/UK/UOE/Year 3/Computer Modelling/Unit 5/pantheon_data.txt'
+data_file = '/Users/sangwonkang/Library/Mobile Documents/com~apple~CloudDocs/Documents/UK/UOE/Year 3/Computer Modelling/Unit 6/pantheon_data.txt'
 likelihood = Likelihood(data_file)
 
 def main():
