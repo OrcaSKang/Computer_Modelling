@@ -18,9 +18,9 @@ class Statistics:
         N : int
             The length of the chain.
         B : float
-            The variance of the means
+            The variance of the means.
         W : float
-            The mean of the variances
+            The mean of the variances.
 
         Returns
         -------
@@ -34,7 +34,19 @@ class Statistics:
 
     def plot(self, x, y):
         """
-        ---------------------------------------------------------------------------------------------------------------------------------------------
+        Make a plot for the given x and y with appropriate labels and legend.
+
+        Parameters
+        ----------
+        x : list
+            The list of values of x axis (The number of sample points in chains).
+        y : list
+            The list of values of y axis (R - 1 values).
+
+        Returns
+        -------
+        plot
+            A plot showing the convergence with respect to the number of sample points of the chains.
         """
         plt.plot(x, y, label = ["Omega m", "Omega lambda", "H0"])
         plt.xlabel("Number of sample points")
@@ -52,11 +64,12 @@ class Statistics:
         Parameter
         ---------
         n : int
-            The number of times to run the Metropolis algorithm
-
+            The number of times to run the Metropolis algorithm.
+ 
         Return
         ------
-        ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        list
+            A 10 by 3 list consists values of R - 1 for 3 parameters.
         """
         convergences = []
 
@@ -86,17 +99,21 @@ class Statistics:
 
         return convergences
 
-
+# Load data file
 data_file = '/Users/sangwonkang/Library/Mobile Documents/com~apple~CloudDocs/Documents/UK/UOE/Year 3/Computer Modelling/Unit 6/pantheon_data.txt'
 likelihood = Likelihood(data_file)
 
+# Set the conditions for the parameters
 bounds = [(0.1, 0.45), (0.25, 0.67), (68.5, 71.5)]
 initial_guess = [0.3, 0.7, 70]
-step_size = [0.07, 0.1, 0.3]
+step_size = [0.05, 0.07, 0.25]
 
 statistics = Statistics()
 
 def main():
+    """
+    Run the main function.
+    """
     convergences = statistics.run_chains(10)
 
     statistics.plot(np.arange(500, 5001, 500), convergences)
